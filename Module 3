@@ -1,0 +1,83 @@
+# LENET ARCHITECTURE
+
+import warnings
+warnings.filterwarnings('ignore')
+
+# import os
+# os.environ['KMP_DUPLICATE_LIB_OK']="TRUE"
+import tensorflow
+import tensorflow as tf
+print(tf.__version__)
+
+from tensorflow.keras.models import Sequential
+
+from tensorflow.keras.layers import Conv2D
+from tensorflow.keras.layers import Convolution2D
+from tensorflow.keras.layers import MaxPool2D
+from tensorflow.keras.layers import MaxPooling2D
+from tensorflow.keras.layers import Flatten
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import Dropout
+from tensorflow.keras.layers import Activation
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+
+train=ImageDataGenerator(rescale=1./255,shear_range=0.2,zoom_range=0.2,horizontal_flip=True,validation_split = 0.2)
+train_data=train.flow_from_directory(directory = 'DATASET/TRAIN',target_size=(224,224),
+                                     batch_size=32,class_mode='categorical')
+test=ImageDataGenerator(rescale=1./255)
+test_data=test.flow_from_directory(directory = 'DATASET/TEST',target_size=(224,224),
+                                   batch_size=32,class_mode='categorical')
+MODEL=Sequential()
+MODEL.add(Convolution2D(filters=32, kernel_size=(3,3), strides=(3,3), input_shape=(224,224,3), padding=('valid'), activation='relu'))
+MODEL.add(MaxPooling2D(pool_size=(2,2), strides=(2,2), padding='valid'))
+MODEL.add(Convolution2D(filters=128, kernel_size=(3,3), strides=(3,3), padding=('valid'), activation='relu'))
+MODEL.add(MaxPooling2D(pool_size=(2,2), strides=(2,2), padding='valid'))
+MODEL.add(Flatten())
+MODEL.add(Dense(256, activation='relu'))
+MODEL.add(Dense(20, activation='softmax'))
+
+OPT    = tensorflow.keras.optimizers.Adam(0.001)
+
+MODEL.compile(optimizer=OPT,loss='categorical_crossentropy',metrics=["accuracy", tensorflow.keras.metrics.Precision(), tensorflow.keras.metrics.Recall()])
+MODEL.summary()
+model_path = "LENET.h5"
+
+from tensorflow.keras.callbacks import ModelCheckpoint
+
+M = ModelCheckpoint(model_path, monitor='accuracy', verbose=1, save_best_only=True, mode='max')
+epochs = 100
+batch_size = 128
+WORKING = MODEL.fit_generator(
+           train_data, steps_per_epoch=train_data.samples // batch_size, 
+           epochs=epochs, 
+           validation_data=test_data,validation_steps=test_data.samples // batch_size,
+           callbacks=[M])
+WORKING.history.keys()
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+plt.figure(figsize=(20, 8))
+plt.plot(WORKING.history['accuracy'])
+
+for i in range(epochs):
+    if i%5 == 0:
+        plt.annotate(np.round(WORKING.history['accuracy'][i]*100,2),xy=(i,WORKING.history['accuracy'][i]))
+
+plt.title('Model accuracy')
+plt.ylabel('Accuracy')
+plt.xlabel('Epoch')
+plt.show()
+import matplotlib.pyplot as plt
+
+plt.figure(figsize=(20, 8))
+plt.plot(WORKING.history['loss'])
+
+for i in range(epochs):
+    if i%5 == 0:
+        plt.annotate(np.round(WORKING.history['loss'][i]*100,2),xy=(i,WORKING.history['loss'][i]))
+
+plt.title('Model Loss')
+plt.ylabel('Loss')
+plt.xlabel('Epoch')
+plt.show()
