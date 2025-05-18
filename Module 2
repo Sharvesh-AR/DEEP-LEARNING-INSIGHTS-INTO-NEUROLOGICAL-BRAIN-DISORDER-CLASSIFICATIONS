@@ -1,0 +1,109 @@
+## ALEXNET ARCHITECTURE
+
+import warnings
+warnings.filterwarnings('ignore')
+import tensorflow
+import tensorflow as tf
+print(tf.__version__)
+
+import keras
+import keras.backend as K
+from keras.models import Model
+from keras.layers import Input, Dense, Conv2D, Conv3D, DepthwiseConv2D, SeparableConv2D, Conv3DTranspose
+from keras.layers import Flatten, MaxPool2D, AvgPool2D, GlobalAvgPool2D, UpSampling2D, BatchNormalization
+from keras.layers import Concatenate, Add, Dropout, ReLU, Lambda, Activation, LeakyReLU, PReLU
+
+
+
+from time import time
+import numpy as np
+
+from keras.callbacks import ModelCheckpoint
+from tensorflow.keras.callbacks import EarlyStopping
+
+import warnings
+warnings.filterwarnings('ignore')
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+
+train=ImageDataGenerator(rescale=1./255,shear_range=0.2,zoom_range=0.2,horizontal_flip=True,validation_split = 0.2)
+train_data=train.flow_from_directory(directory = 'DATASET/TRAIN',target_size=(224,224),
+                                     batch_size=32,class_mode='categorical')
+test=ImageDataGenerator(rescale=1./255)
+test_data=test.flow_from_directory(directory = 'DATASET/TEST',target_size=(224,224),
+                                   batch_size=32,class_mode='categorical')
+def alexnet(input_shape, n_classes):
+  input = Input(input_shape)
+  
+  # actually batch normalization didn't exist back then
+  # they used LRN (Local Response Normalization) for regularization
+  x = Conv2D(96, 11, strides=4, padding='same', activation='relu')(input)
+  x = BatchNormalization()(x)
+  x = MaxPool2D(3, strides=2)(x)
+  
+  x = Conv2D(256, 5, padding='same', activation='relu')(x)
+  x = BatchNormalization()(x)
+  x = MaxPool2D(3, strides=2)(x)
+  
+  x = Conv2D(384, 3, strides=1, padding='same', activation='relu')(x)
+  
+  x = Conv2D(384, 3, strides=1, padding='same', activation='relu')(x)
+  
+  x = Conv2D(256, 3, strides=1, padding='same', activation='relu')(x)
+  x = BatchNormalization()(x)
+  x = MaxPool2D(3, strides=2)(x)
+  
+  x = Flatten()(x)
+  x = Dense(4096, activation='relu')(x)
+  x = Dense(4096, activation='relu')(x)
+  
+  output = Dense(n_classes, activation='softmax')(x)
+  
+  model = Model(input, output)
+  model.compile(optimizer='Adam',loss='categorical_crossentropy',metrics=['accuracy',tensorflow.keras.metrics.Precision()])
+  return model
+
+input_shape = 224, 224, 3
+n_classes = 20
+
+K.clear_session()
+model = alexnet(input_shape, n_classes)
+model.summary()          
+model_path = "ALEXNET.h5"
+
+from keras.callbacks import ModelCheckpoint
+
+M = ModelCheckpoint(model_path, monitor='accuracy', verbose=1, save_best_only=True)
+epochs = 50
+batch_size = 512
+#### Fitting the model
+history = model.fit(
+           train_data, steps_per_epoch=train_data.samples // batch_size, 
+           epochs=epochs, 
+           validation_data=test_data,validation_steps=test_data.samples // batch_size,
+           callbacks=[M])
+history.history.keys()
+import matplotlib.pyplot as plt
+import numpy as np
+
+plt.figure(figsize=(20, 8))
+plt.plot(history.history['accuracy'])
+
+for i in range(epochs):
+    if i%5 == 0:
+        plt.annotate(np.round(history.history['accuracy'][i]*100,2),xy=(i,history.history['accuracy'][i]))
+
+plt.title('Model accuracy')
+plt.ylabel('Accuracy')
+plt.xlabel('Epoch')
+plt.show()
+plt.figure(figsize=(20, 8))
+plt.plot(history.history['loss'])
+
+for i in range(epochs):
+    if i%5 == 0:
+        plt.annotate(np.round(history.history['loss'][i]*100,2),xy=(i,history.history['loss'][i]))
+
+plt.title('Model Loss')
+plt.ylabel('Loss')
+plt.xlabel('Epoch')
+plt.show()
