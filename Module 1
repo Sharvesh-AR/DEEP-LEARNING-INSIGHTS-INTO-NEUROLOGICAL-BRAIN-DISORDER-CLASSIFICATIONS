@@ -1,0 +1,133 @@
+# MANUAL NET ARCHITECTURE
+import warnings
+warnings.filterwarnings('ignore')
+import os
+import glob
+import numpy as np
+
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+
+from tensorflow.keras.models import Sequential
+from PIL import Image
+
+from tensorflow.keras.layers import Convolution2D
+from tensorflow.keras.layers import MaxPooling2D
+from tensorflow.keras.layers import Flatten
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import Activation
+
+from keras.callbacks import ModelCheckpoint
+import matplotlib.pyplot as plt
+dermatofibroma_disease = 'DATASET/TRAIN/dermatofibroma_disease'
+basal_cell_carcinoma = 'DATASET/Train/basal_cell_carcinoma_disease'
+melanoma = 'DATASET/Train/melanoma_cancer'
+vascular_lesion_cancer = 'DATASET/Train/vascular_lesion_cancer'
+def plot_images(item_dir, n=6):
+    all_item_dir = os.listdir(item_dir)
+    item_files = [os.path.join(item_dir, file) for file in all_item_dir][:n]
+    
+    plt.figure(figsize=(80, 40))
+    for idx, img_path in enumerate(item_files):
+        plt.subplot(3, n, idx+1)
+        img = plt.imread(img_path)
+        plt.imshow(img, cmap='gray')
+        plt.axis('off')
+    
+    plt.tight_layout()
+    
+def image_details_print(data,path):
+    print('======== Images in: ', path)
+    for key,values in data.items():
+        print(key,':\t', values)
+
+
+def images_details(path):
+    files=[f for f in glob.glob(path + "**/*.*", recursive=True)]
+    data={}
+    data['Images_count']=len(files)
+    data['Min_width']=10**100
+    data['Max_width']=0
+    data['Min_height']=10**100
+    data['Max_height']=0
+    
+    for f in files:
+        img=Image.open(f)
+        width,height=img.size
+        data['Min_width']=min(width,data['Min_width'])
+        data['Max_width']=max(width, data['Max_width'])
+        data['Min_height']=min(height, data['Min_height'])
+        data['Max_height']=max(height, data['Max_height'])
+        
+    image_details_print(data,path)
+print("")
+print("TRAINING DATA FOR dermatofibroma_disease:")
+print("")
+images_details(dermatofibroma_disease)
+print("")
+plot_images(dermatofibroma_disease, 10) 
+print("")
+print("TRAINING DATA FOR basal_cell_carcinoma:")
+print("")
+images_details(basal_cell_carcinoma)
+print("")
+plot_images(basal_cell_carcinoma, 10) 
+print("")
+print("TRAINING DATA FOR melanoma:")
+print("")
+images_details(melanoma)
+print("")
+plot_images(melanoma, 10)
+print("")
+print("TRAINING DATA FOR vascular_lesion_cancer:")
+print("")
+images_details(vascular_lesion_cancer)
+print("")
+plot_images(vascular_lesion_cancer, 10) 
+train_datagen=ImageDataGenerator(rescale=1./255,shear_range=0.2,zoom_range=0.2,horizontal_flip=True)
+training_set=train_datagen.flow_from_directory('DATASET/Train',target_size=(224,224),batch_size=32,class_mode='categorical')
+test_datagen=ImageDataGenerator(rescale=1./255)
+test_set=test_datagen.flow_from_directory('DATASET/Test',target_size=(224,224),batch_size=32,class_mode='categorical')
+Classifier=Sequential()
+Classifier.add(Convolution2D(32,(3,3),input_shape=(224,224,3),activation='relu'))
+Classifier.add(MaxPooling2D(pool_size=(2,2)))
+Classifier.add(Flatten())
+Classifier.add(Dense(38, activation='relu'))
+Classifier.add(Dense(20, activation='softmax'))
+Classifier.compile(optimizer='rmsprop',loss='categorical_crossentropy',metrics=['accuracy'])
+model_path = "MANUAL.h5"
+
+callbacks = [
+    ModelCheckpoint(model_path, monitor='accuracy', verbose=1, save_best_only=True)
+]
+epochs = 10
+batch_size = 512
+#### Fitting the model
+history = Classifier.fit(
+           training_set, steps_per_epoch=training_set.samples // batch_size, 
+           epochs=epochs, 
+           validation_data=test_set,validation_steps=test_set.samples // batch_size,
+           callbacks=callbacks)
+import matplotlib.pyplot as plt
+
+def graph():
+    #Plot training & validation accuracy values
+    plt.plot(history.history['accuracy'])
+    plt.plot(history.history['val_accuracy'])
+    plt.title('Model accuracy')
+    plt.ylabel('Accuracy')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Test'], loc='upper left')
+    plt.show()
+
+graph()
+import matplotlib.pyplot as plt
+
+def graph():
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('Model loss')
+    plt.ylabel('Loss')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Test'], loc='upper left')
+    plt.show()
+graph()
