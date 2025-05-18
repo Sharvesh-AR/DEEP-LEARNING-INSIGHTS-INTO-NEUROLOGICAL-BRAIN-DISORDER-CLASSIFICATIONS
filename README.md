@@ -13,7 +13,7 @@ _CNNs & Attention Mechanisms_
 _Nibabel, Nilearn, Scikit-learn_
 _MRI/CT data processing tools_
 
-**📁 Dataset**
+📁 **Dataset**
 This project utilizes publicly available datasets such as:
 
 **ADNI** (Alzheimer’s Disease Neuroimaging Initiative)
