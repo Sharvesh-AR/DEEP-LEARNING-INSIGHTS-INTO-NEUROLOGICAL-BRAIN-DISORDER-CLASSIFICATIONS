@@ -4,7 +4,7 @@ import warnings
 warnings.filterwarnings('ignore')
 import tensorflow
 import tensorflow as tf
-print(tf.__version__)
+print(tf.___version___)
 
 import keras
 import keras.backend as K
